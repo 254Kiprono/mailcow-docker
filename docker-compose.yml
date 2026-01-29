@@ -20,9 +20,6 @@ services:
       profiles:
         - disabled
       image: mariadb:10.11
-      depends_on:
-        - unbound-mailcow
-
       stop_grace_period: 45s
       volumes:
         - mysql-vol-1:/var/lib/mysql/
@@ -52,8 +49,6 @@ services:
         - redis-vol-1:/data/
         - ./data/conf/redis/redis-conf.sh:/redis-conf.sh:z
       restart: always
-      depends_on:
-
       ports:
         - "${REDIS_PORT:-127.0.0.1:7654}:6379"
       environment:
@@ -71,9 +66,7 @@ services:
     clamd-mailcow:
       image: ghcr.io/mailcow/clamd:1.71
       restart: always
-      depends_on:
-        unbound-mailcow:
-          condition: service_healthy
+
       dns:
         - ${IPV4_NETWORK:-172.22.1}.254
       environment:
@@ -93,9 +86,7 @@ services:
         - redis-ec:redis
 
       stop_grace_period: 30s
-      depends_on:
-        - dovecot-mailcow
-        - clamd-mailcow
+
       environment:
         - TZ=${TZ}
         - IPV4_NETWORK=${IPV4_NETWORK:-172.22.1}
@@ -359,13 +350,7 @@ services:
         - hkup-db-service:mysql
         - redis-ec:redis
 
-      depends_on:
 
-
-        unbound-mailcow:
-          condition: service_healthy
-        postfix-tlspol-mailcow:
-          condition: service_started
       volumes:
         - ./data/hooks/postfix:/hooks:Z
         - ./data/conf/postfix:/opt/postfix/conf:z
@@ -402,9 +387,7 @@ services:
 
     postfix-tlspol-mailcow:
       image: ghcr.io/mailcow/postfix-tlspol:1.8.22
-      depends_on:
-        unbound-mailcow:
-          condition: service_healthy
+
       volumes:
         - postfix-tlspol-vol-1:/var/lib/postfix-tlspol
       environment:
@@ -483,11 +466,7 @@ services:
             - nginx
 
     acme-mailcow:
-      depends_on:
 
-
-        unbound-mailcow:
-          condition: service_healthy
       image: ghcr.io/mailcow/acme:1.95
       external_links:
         - hkup-db-service:mysql
@@ -564,12 +543,6 @@ services:
         - postfix-vol-1:/var/spool/postfix
         - ./data/assets/ssl:/etc/ssl/mail/:ro,z
       restart: always
-      depends_on:
-        - postfix-mailcow
-        - dovecot-mailcow
-
-        - acme-mailcow
-
       environment:
         - IPV6_NETWORK=${IPV6_NETWORK:-fd4d:6169:6c63:6f77::/64}
         - LOG_LINES=${LOG_LINES:-9999}
@@ -673,9 +646,7 @@ services:
       environment:
         - TZ=${TZ}
         - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-      depends_on:
-        - sogo-mailcow
-        - dovecot-mailcow
+
       labels:
         ofelia.enabled: "true"
       security_opt:
