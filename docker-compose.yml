@@ -6,16 +6,16 @@ services:
         - TZ=${TZ}
       restart: always
       networks:
-        mailcow-network:
+        e-commerce-network:
           aliases:
             - unbound
 
     php-fpm-mailcow:
       image: ghcr.io/mailcow/phpfpm:8.2.29-1
       command: "php-fpm -d date.timezone=${TZ} -d expose_php=0"
-      external_links:
-        - hkup-db-service:mysql
-        - redis-ec:redis
+      extra_hosts:
+        - "mysql:172.22.0.5"
+        - "redis:172.22.0.3"
       environment:
         - REDIS_SLAVEOF_IP=${REDIS_SLAVEOF_IP:-}
         - REDIS_SLAVEOF_PORT=${REDIS_SLAVEOF_PORT:-}
@@ -37,15 +37,15 @@ services:
         - mysql-socket-vol-1:/var/run/mysqld/:z
       restart: always
       networks:
-        mailcow-network:
+        e-commerce-network:
           aliases:
             - phpfpm
 
     sogo-mailcow:
       image: ghcr.io/mailcow/sogo:5.12.4-1
-      external_links:
-        - hkup-db-service:mysql
-        - redis-ec:redis
+      extra_hosts:
+        - "mysql:172.22.0.5"
+        - "redis:172.22.0.3"
       environment:
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
@@ -62,15 +62,15 @@ services:
         - sogo-web-vol-1:/sogo_web
       restart: always
       networks:
-        mailcow-network:
+        e-commerce-network:
           aliases:
             - sogo
 
     dovecot-mailcow:
       image: ghcr.io/mailcow/dovecot:2.3.21.1-1
-      external_links:
-        - hkup-db-service:mysql
-        - redis-ec:redis
+      extra_hosts:
+        - "mysql:172.22.0.5"
+        - "redis:172.22.0.3"
       volumes:
         - ./data/conf/dovecot:/etc/dovecot:z
         - vmail-vol-1:/var/vmail
@@ -85,15 +85,15 @@ services:
         - TZ=${TZ}
       restart: always
       networks:
-        mailcow-network:
+        e-commerce-network:
           aliases:
             - dovecot
 
     postfix-mailcow:
       image: ghcr.io/mailcow/postfix:3.7.11-1
-      external_links:
-        - hkup-db-service:mysql
-        - redis-ec:redis
+      extra_hosts:
+        - "mysql:172.22.0.5"
+        - "redis:172.22.0.3"
       volumes:
         - ./data/conf/postfix:/opt/postfix/conf:z
         - ./data/assets/ssl:/etc/ssl/mail/:ro,z
@@ -107,14 +107,14 @@ services:
         - TZ=${TZ}
       restart: always
       networks:
-        mailcow-network:
+        e-commerce-network:
           aliases:
             - postfix
 
     rspamd-mailcow:
       image: ghcr.io/mailcow/rspamd:3.14.2
-      external_links:
-        - redis-ec:redis
+      extra_hosts:
+        - "redis:172.22.0.3"
       environment:
         - TZ=${TZ}
         - REDIS_HOST=${REDIS_HOST}
@@ -122,7 +122,7 @@ services:
         - rspamd-vol-1:/var/lib/rspamd
       restart: always
       networks:
-        mailcow-network:
+        e-commerce-network:
           aliases:
             - rspamd
 
@@ -143,15 +143,15 @@ services:
         - sogo-web-vol-1:/usr/lib/GNUstep/SOGo/
       restart: always
       networks:
-        mailcow-network:
+        e-commerce-network:
           aliases:
             - nginx
 
     watchdog-mailcow:
       image: ghcr.io/mailcow/watchdog:2.09
-      external_links:
-        - hkup-db-service:mysql
-        - redis-ec:redis
+      extra_hosts:
+        - "mysql:172.22.0.5"
+        - "redis:172.22.0.3"
       environment:
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
@@ -161,15 +161,13 @@ services:
         - TZ=${TZ}
       restart: always
       networks:
-        mailcow-network:
-          aliases:
-            - watchdog
+        e-commerce-network:
 
     acme-mailcow:
       image: ghcr.io/mailcow/acme:1.95
-      external_links:
-        - hkup-db-service:mysql
-        - redis-ec:redis
+      extra_hosts:
+        - "mysql:172.22.0.5"
+        - "redis:172.22.0.3"
       environment:
         - DBHOST=${DBHOST}
         - REDIS_HOST=${REDIS_HOST}
@@ -177,7 +175,7 @@ services:
         - MAILCOW_HOSTNAME=${MAILCOW_HOSTNAME}
       restart: always
       networks:
-        mailcow-network:
+        e-commerce-network:
 
     netfilter-mailcow:
       image: ghcr.io/mailcow/netfilter:1.63
@@ -194,7 +192,7 @@ services:
         - /var/run/docker.sock:/var/run/docker.sock:ro
       restart: always
       networks:
-        mailcow-network:
+        e-commerce-network:
 
     olefy-mailcow:
       image: ghcr.io/mailcow/olefy:1.15
@@ -202,7 +200,7 @@ services:
         - TZ=${TZ}
       restart: always
       networks:
-        mailcow-network:
+        e-commerce-network:
 
     memcached-mailcow:
       image: memcached:alpine
@@ -210,19 +208,19 @@ services:
         - TZ=${TZ}
       restart: always
       networks:
-        mailcow-network:
+        e-commerce-network:
 
     ofelia-mailcow:
       image: mcuadros/ofelia:latest
-      command: daemon --docker -f label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}
+      command: daemon --docker -f label=com.docker.compose.project=mailcow-dockerized
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock:ro
       restart: always
       networks:
-        mailcow-network:
+        e-commerce-network:
 
 networks:
-  mailcow-network:
+  e-commerce-network:
     name: e-c-deployerscript_e-commerce-network
     external: true
 
