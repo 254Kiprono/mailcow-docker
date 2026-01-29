@@ -197,10 +197,6 @@ services:
         ofelia.job-exec.phpfpm_ldap_sync.schedule: "0 * * * * *"
         ofelia.job-exec.phpfpm_ldap_sync.no-overlap: "true"
         ofelia.job-exec.phpfpm_ldap_sync.command: "/bin/bash -c \"php /crons/ldap-sync.php || exit 0\""
-      networks:
-        mailcow-network:
-          aliases:
-            - phpfpm
 
     sogo-mailcow:
       image: ghcr.io/mailcow/sogo:5.12.4-1
