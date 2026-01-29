@@ -144,6 +144,31 @@ start_services() {
     print_info "Starting Mailcow services..."
     cd "${MAILCOW_DIR}"
     
+    # FIX: Clean up Docker-created directories that should be files (SOGo fix)
+    # This prevents the "not a directory" mount error
+    print_info "Cleaning up potential mount conflicts..."
+    SOGO_CONF_DIR="data/conf/sogo"
+    FILES_TO_FIX=(
+        "custom-favicon.ico"
+        "custom-shortlogo.svg"
+        "custom-fulllogo.svg"
+        "custom-fulllogo.png"
+        "custom-theme.js"
+        "custom-sogo.js"
+    )
+    
+    for file in "${FILES_TO_FIX[@]}"; do
+        if [ -d "${SOGO_CONF_DIR}/${file}" ]; then
+            print_warn "Removing fake directory: ${SOGO_CONF_DIR}/${file}"
+            rm -rf "${SOGO_CONF_DIR}/${file}"
+        fi
+    done
+    
+    # Restore actual files if they were deleted or replaced by folders
+    if command -v git &> /dev/null && [ -d .git ]; then
+        git checkout -- "${SOGO_CONF_DIR}/" 2>/dev/null || true
+    fi
+
     # Start services (excluding disabled ones)
     docker-compose up -d
     
