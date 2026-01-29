@@ -209,6 +209,8 @@ services:
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
         - DBPASS=${DBPASS}
+        - DBHOST=${DBHOST}
+        - REDIS_HOST=${REDIS_HOST}
         - TZ=${TZ}
         - LOG_LINES=${LOG_LINES:-9999}
         - MAILCOW_HOSTNAME=${MAILCOW_HOSTNAME}
@@ -223,8 +225,9 @@ services:
         - REDIS_SLAVEOF_IP=${REDIS_SLAVEOF_IP:-}
         - REDIS_SLAVEOF_PORT=${REDIS_SLAVEOF_PORT:-}
         - REDISPASS=${REDISPASS}
-      dns:
-        - ${IPV4_NETWORK:-172.22.1}.254
+      # Removed local DNS to allow visibility of external stack
+      # dns:
+      #   - ${IPV4_NETWORK:-172.22.1}.254
       volumes:
         - ./data/hooks/sogo:/hooks:Z
         - ./data/conf/sogo/:/etc/sogo/:z
@@ -425,8 +428,9 @@ services:
 
 
       image: ghcr.io/mailcow/nginx:1.05
-      dns:
-        - ${IPV4_NETWORK:-172.22.1}.254
+      # Removed local DNS to allow visibility of external stack
+      # dns:
+      #   - ${IPV4_NETWORK:-172.22.1}.254
       environment:
         - HTTPS_PORT=${HTTPS_PORT:-443}
         - HTTP_PORT=${HTTP_PORT:-80}
