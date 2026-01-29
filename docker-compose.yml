@@ -185,6 +185,10 @@ services:
         - CLUSTERMODE=${CLUSTERMODE:-}
         - ADDITIONAL_SERVER_NAMES=${ADDITIONAL_SERVER_NAMES:-}
       restart: always
+      networks:
+        mailcow-network:
+          aliases:
+            - phpfpm
       labels:
         ofelia.enabled: "true"
         ofelia.job-exec.phpfpm_keycloak_sync.schedule: "0 * * * * *"
