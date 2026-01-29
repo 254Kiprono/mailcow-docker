@@ -158,16 +158,19 @@ start_services() {
     )
     
     for file in "${FILES_TO_FIX[@]}"; do
-        if [ -d "${SOGO_CONF_DIR}/${file}" ]; then
-            print_warn "Removing fake directory: ${SOGO_CONF_DIR}/${file}"
+        if [ -e "${SOGO_CONF_DIR}/${file}" ]; then
+            print_warn "Cleaning up: ${SOGO_CONF_DIR}/${file}"
             rm -rf "${SOGO_CONF_DIR}/${file}"
         fi
     done
     
-    # Restore actual files if they were deleted or replaced by folders
-    if command -v git &> /dev/null && [ -d .git ]; then
-        git checkout -- "${SOGO_CONF_DIR}/" 2>/dev/null || true
+    # Restore actual files (guarantees they are files, not folders)
+    if [ -d .git ]; then
+        git checkout -- "${SOGO_CONF_DIR}/" &>/dev/null || true
     fi
+
+    # Final verification: if it's STILL a directory, delete it again
+    find "${SOGO_CONF_DIR}/" -type d -name "custom-*" -exec rm -rf {} + 2>/dev/null || true
 
     # Start services (excluding disabled ones)
     docker-compose up -d
