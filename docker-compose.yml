@@ -12,15 +12,17 @@ services:
       tty: true
       networks:
         mailcow-network:
-          ipv4_address: ${IPV4_NETWORK:-172.22.1}.254
+
           aliases:
             - unbound
 
     mysql-mailcow:
+      profiles:
+        - disabled
       image: mariadb:10.11
       depends_on:
         - unbound-mailcow
-        - netfilter-mailcow
+
       stop_grace_period: 45s
       volumes:
         - mysql-vol-1:/var/lib/mysql/
@@ -42,6 +44,8 @@ services:
             - mysql
 
     redis-mailcow:
+      profiles:
+        - disabled
       image: redis:7.4.6-alpine
       entrypoint: ["/bin/sh","/redis-conf.sh"]
       volumes:
@@ -49,7 +53,7 @@ services:
         - ./data/conf/redis/redis-conf.sh:/redis-conf.sh:z
       restart: always
       depends_on:
-        - netfilter-mailcow
+
       ports:
         - "${REDIS_PORT:-127.0.0.1:7654}:6379"
       environment:
@@ -60,7 +64,7 @@ services:
         - net.core.somaxconn=4096
       networks:
         mailcow-network:
-          ipv4_address: ${IPV4_NETWORK:-172.22.1}.249
+
           aliases:
             - redis
 
@@ -85,6 +89,9 @@ services:
 
     rspamd-mailcow:
       image: ghcr.io/mailcow/rspamd:3.14.2
+      external_links:
+        - redis-ec:redis
+
       stop_grace_period: 30s
       depends_on:
         - dovecot-mailcow
@@ -119,8 +126,10 @@ services:
     php-fpm-mailcow:
       image: ghcr.io/mailcow/phpfpm:8.2.29-1
       command: "php-fpm -d date.timezone=${TZ} -d expose_php=0"
-      depends_on:
-        - redis-mailcow
+      external_links:
+        - hkup-db-service:mysql
+        - redis-ec:redis
+
       volumes:
         - ./data/hooks/phpfpm:/hooks:Z
         - ./data/web:/web:z
@@ -201,6 +210,10 @@ services:
 
     sogo-mailcow:
       image: ghcr.io/mailcow/sogo:5.12.4-1
+      external_links:
+        - hkup-db-service:mysql
+        - redis-ec:redis
+
       environment:
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
@@ -247,16 +260,18 @@ services:
       restart: always
       networks:
         mailcow-network:
-          ipv4_address: ${IPV4_NETWORK:-172.22.1}.248
+
           aliases:
             - sogo
 
     dovecot-mailcow:
       image: ghcr.io/mailcow/dovecot:2.3.21.1-1
-      depends_on:
-        - mysql-mailcow
-        - netfilter-mailcow
-        - redis-mailcow
+      external_links:
+        - hkup-db-service:mysql
+        - redis-ec:redis
+
+
+
       dns:
         - ${IPV4_NETWORK:-172.22.1}.254
       cap_add:
@@ -334,15 +349,19 @@ services:
           hard: 40000
       networks:
         mailcow-network:
-          ipv4_address: ${IPV4_NETWORK:-172.22.1}.250
+
           aliases:
             - dovecot
 
     postfix-mailcow:
       image: ghcr.io/mailcow/postfix:3.7.11-1
+      external_links:
+        - hkup-db-service:mysql
+        - redis-ec:redis
+
       depends_on:
-        mysql-mailcow:
-          condition: service_started
+
+
         unbound-mailcow:
           condition: service_healthy
         postfix-tlspol-mailcow:
@@ -377,7 +396,7 @@ services:
         - ${IPV4_NETWORK:-172.22.1}.254
       networks:
         mailcow-network:
-          ipv4_address: ${IPV4_NETWORK:-172.22.1}.253
+
           aliases:
             - postfix
 
@@ -415,10 +434,13 @@ services:
 
     nginx-mailcow:
       depends_on:
-        - redis-mailcow
         - php-fpm-mailcow
         - sogo-mailcow
         - rspamd-mailcow
+
+
+
+
       image: ghcr.io/mailcow/nginx:1.05
       dns:
         - ${IPV4_NETWORK:-172.22.1}.254
@@ -450,9 +472,10 @@ services:
         - ./data/web/inc/functions.auth.inc.php:/mailcowauth/functions.auth.inc.php:z
         - ./data/web/inc/sessions.inc.php:/mailcowauth/sessions.inc.php:z
         - sogo-web-vol-1:/usr/lib/GNUstep/SOGo/
-      ports:
-        - "${HTTPS_BIND:-}:${HTTPS_PORT:-443}:${HTTPS_PORT:-443}"
-        - "${HTTP_BIND:-}:${HTTP_PORT:-80}:${HTTP_PORT:-80}"
+      # Ports disabled - accessed via nginx-ec proxy only
+      # ports:
+      #   - "${HTTPS_BIND:-}:${HTTPS_PORT:-443}:${HTTPS_PORT:-443}"
+      #   - "${HTTP_BIND:-}:${HTTP_PORT:-80}:${HTTP_PORT:-80}"
       restart: always
       networks:
         mailcow-network:
@@ -461,11 +484,15 @@ services:
 
     acme-mailcow:
       depends_on:
-        nginx-mailcow:
-          condition: service_started
+
+
         unbound-mailcow:
           condition: service_healthy
       image: ghcr.io/mailcow/acme:1.95
+      external_links:
+        - hkup-db-service:mysql
+        - redis-ec:redis
+
       dns:
         - ${IPV4_NETWORK:-172.22.1}.254
       environment:
@@ -523,6 +550,10 @@ services:
 
     watchdog-mailcow:
       image: ghcr.io/mailcow/watchdog:2.09
+      external_links:
+        - hkup-db-service:mysql
+        - redis-ec:redis
+
       dns:
         - ${IPV4_NETWORK:-172.22.1}.254
       tmpfs:
@@ -536,9 +567,9 @@ services:
       depends_on:
         - postfix-mailcow
         - dovecot-mailcow
-        - mysql-mailcow
+
         - acme-mailcow
-        - redis-mailcow
+
       environment:
         - IPV6_NETWORK=${IPV6_NETWORK:-fd4d:6169:6c63:6f77::/64}
         - LOG_LINES=${LOG_LINES:-9999}
@@ -658,15 +689,8 @@ services:
 
 networks:
   mailcow-network:
-    driver: bridge
-    driver_opts:
-      com.docker.network.bridge.name: br-mailcow
-    enable_ipv6: ${ENABLE_IPV6:-true}
-    ipam:
-      driver: default
-      config:
-        - subnet: ${IPV4_NETWORK:-172.22.1}.0/24
-        - subnet: ${IPV6_NETWORK:-fd4d:6169:6c63:6f77::/64}
+    name: e-c-deployerscript_e-commerce-network
+    external: true
 
 volumes:
   vmail-vol-1:
