@@ -397,10 +397,6 @@ services:
         - postfix-tlspol-vol-1:/var/lib/postfix-tlspol
       environment:
         - LOG_LINES=${LOG_LINES:-9999}
-      # Removed local DNS to allow visibility of external stack
-      # dns:
-      #   - ${IPV4_NETWORK:-172.22.1}.254
-      environment:
         - DBHOST=${DBHOST}
         - REDIS_HOST=${REDIS_HOST}
         - TZ=${TZ}
