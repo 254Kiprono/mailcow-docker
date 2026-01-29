@@ -56,28 +56,30 @@ check_prerequisites() {
 setup_environment() {
     print_info "Setting up environment configuration..."
     
-    if [ ! -f "${MAILCOW_DIR}/mailcow.conf" ]; then
+    # Use .env file directly (already exists in repo)
+    if [ ! -f "${MAILCOW_DIR}/.env" ]; then
         if [ -f "${MAILCOW_DIR}/mailcow.conf.example" ]; then
-            cp "${MAILCOW_DIR}/mailcow.conf.example" "${MAILCOW_DIR}/mailcow.conf"
-            
-            # Generate random API keys
-            API_KEY=$(openssl rand -hex 16)
-            API_KEY_RO=$(openssl rand -hex 16)
-            SOGO_KEY=$(openssl rand -hex 16)
-            
-            # Update the config file
-            sed -i "s/GENERATE_ON_SERVER/${API_KEY}/g" "${MAILCOW_DIR}/mailcow.conf"
-            sed -i "s/API_KEY_READ_ONLY=GENERATE_ON_SERVER/API_KEY_READ_ONLY=${API_KEY_RO}/g" "${MAILCOW_DIR}/mailcow.conf"
-            sed -i "s/SOGO_URL_ENCRYPTION_KEY=GENERATE_ON_SERVER/SOGO_URL_ENCRYPTION_KEY=${SOGO_KEY}/g" "${MAILCOW_DIR}/mailcow.conf"
-            
-            print_info "Environment configuration created: mailcow.conf"
-            print_warn "Review and update mailcow.conf if needed before deployment"
+            cp "${MAILCOW_DIR}/mailcow.conf.example" "${MAILCOW_DIR}/.env"
+            print_info "Environment configuration created from example"
         else
-            print_error "mailcow.conf.example not found!"
+            print_error ".env file not found!"
             exit 1
         fi
     else
-        print_info "Using existing mailcow.conf"
+        print_info "Using existing .env file"
+    fi
+    
+    # Generate API keys if they're empty
+    if grep -q "^API_KEY=$" "${MAILCOW_DIR}/.env" 2>/dev/null; then
+        API_KEY=$(openssl rand -hex 16)
+        API_KEY_RO=$(openssl rand -hex 16)
+        SOGO_KEY=$(openssl rand -hex 16)
+        
+        sed -i "s/^API_KEY=$/API_KEY=${API_KEY}/" "${MAILCOW_DIR}/.env"
+        sed -i "s/^API_KEY_READ_ONLY=$/API_KEY_READ_ONLY=${API_KEY_RO}/" "${MAILCOW_DIR}/.env"
+        sed -i "s/^SOGO_URL_ENCRYPTION_KEY=$/SOGO_URL_ENCRYPTION_KEY=${SOGO_KEY}/" "${MAILCOW_DIR}/.env"
+        
+        print_info "Generated API keys"
     fi
 }
 
@@ -88,7 +90,12 @@ verify_database() {
     print_info "Verifying database configuration..."
     
     # Source the config
-    source "${MAILCOW_DIR}/mailcow.conf"
+    if [ -f "${MAILCOW_DIR}/.env" ]; then
+        source "${MAILCOW_DIR}/.env"
+    else
+        print_error ".env file not found!"
+        exit 1
+    fi
     
     # Check if hkup-db-service is running
     if ! docker ps | grep -q "hkup-db-service"; then
