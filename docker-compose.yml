@@ -6,27 +6,21 @@ services:
         - TZ=${TZ}
       restart: always
       networks:
-        e-commerce-network:
+        mailcow-network:
           aliases:
             - unbound
 
     php-fpm-mailcow:
       image: ghcr.io/mailcow/phpfpm:8.2.29-1
       command: "php-fpm -d date.timezone=${TZ} -d expose_php=0"
-      extra_hosts:
-        - "mysql:172.22.0.5"
-        - "redis:172.22.0.3"
       environment:
-        - REDIS_SLAVEOF_IP=${REDIS_SLAVEOF_IP:-}
-        - REDIS_SLAVEOF_PORT=${REDIS_SLAVEOF_PORT:-}
-        - REDISPASS=${REDISPASS}
         - LOG_LINES=${LOG_LINES:-9999}
         - TZ=${TZ}
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
         - DBPASS=${DBPASS}
-        - DBHOST=${DBHOST}
-        - REDIS_HOST=${REDIS_HOST}
+        - DBHOST=172.22.0.5
+        - REDIS_HOST=172.22.0.3
         - MAILCOW_HOSTNAME=${MAILCOW_HOSTNAME}
         - MASTER=${MASTER:-y}
       volumes:
@@ -34,95 +28,81 @@ services:
         - ./data/web:/web:z
         - ./data/conf/sogo/:/etc/sogo/:z
         - ./data/conf/nginx/:/etc/nginx/conf.d/:z
-        - mysql-socket-vol-1:/var/run/mysqld/:z
       restart: always
       networks:
-        e-commerce-network:
+        mailcow-network:
           aliases:
             - phpfpm
 
     sogo-mailcow:
       image: ghcr.io/mailcow/sogo:5.12.4-1
-      extra_hosts:
-        - "mysql:172.22.0.5"
-        - "redis:172.22.0.3"
       environment:
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
         - DBPASS=${DBPASS}
-        - DBHOST=${DBHOST}
-        - REDIS_HOST=${REDIS_HOST}
+        - DBHOST=172.22.0.5
+        - REDIS_HOST=172.22.0.3
         - TZ=${TZ}
         - MAILCOW_HOSTNAME=${MAILCOW_HOSTNAME}
         - MASTER=${MASTER:-y}
       volumes:
         - ./data/conf/sogo/:/etc/sogo/:z
         - ./data/web/inc/init_db.inc.php:/init_db.inc.php:z
-        - mysql-socket-vol-1:/var/run/mysqld/:z
         - sogo-web-vol-1:/sogo_web
       restart: always
       networks:
-        e-commerce-network:
+        mailcow-network:
           aliases:
             - sogo
 
     dovecot-mailcow:
       image: ghcr.io/mailcow/dovecot:2.3.21.1-1
-      extra_hosts:
-        - "mysql:172.22.0.5"
-        - "redis:172.22.0.3"
       volumes:
         - ./data/conf/dovecot:/etc/dovecot:z
         - vmail-vol-1:/var/vmail
         - ./data/assets/ssl:/etc/ssl/mail/:ro,z
-        - mysql-socket-vol-1:/var/run/mysqld/:z
       environment:
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
         - DBPASS=${DBPASS}
-        - DBHOST=${DBHOST}
-        - REDIS_HOST=${REDIS_HOST}
+        - DBHOST=172.22.0.5
+        - REDIS_HOST=172.22.0.3
         - TZ=${TZ}
+        - MAILCOW_HOSTNAME=${MAILCOW_HOSTNAME}
       restart: always
       networks:
-        e-commerce-network:
+        mailcow-network:
           aliases:
             - dovecot
 
     postfix-mailcow:
       image: ghcr.io/mailcow/postfix:3.7.11-1
-      extra_hosts:
-        - "mysql:172.22.0.5"
-        - "redis:172.22.0.3"
       volumes:
         - ./data/conf/postfix:/opt/postfix/conf:z
         - ./data/assets/ssl:/etc/ssl/mail/:ro,z
-        - mysql-socket-vol-1:/var/run/mysqld/:z
       environment:
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
         - DBPASS=${DBPASS}
-        - DBHOST=${DBHOST}
-        - REDIS_HOST=${REDIS_HOST}
+        - DBHOST=172.22.0.5
+        - REDIS_HOST=172.22.0.3
         - TZ=${TZ}
       restart: always
       networks:
-        e-commerce-network:
+        mailcow-network:
           aliases:
             - postfix
 
     rspamd-mailcow:
       image: ghcr.io/mailcow/rspamd:3.14.2
-      extra_hosts:
-        - "redis:172.22.0.3"
       environment:
         - TZ=${TZ}
-        - REDIS_HOST=${REDIS_HOST}
+        - REDIS_HOST=172.22.0.3
       volumes:
         - rspamd-vol-1:/var/lib/rspamd
       restart: always
       networks:
-        e-commerce-network:
+        mailcow-network:
           aliases:
             - rspamd
 
@@ -143,39 +123,32 @@ services:
         - sogo-web-vol-1:/usr/lib/GNUstep/SOGo/
       restart: always
       networks:
-        e-commerce-network:
+        mailcow-network:
           aliases:
             - nginx
 
     watchdog-mailcow:
       image: ghcr.io/mailcow/watchdog:2.09
-      extra_hosts:
-        - "mysql:172.22.0.5"
-        - "redis:172.22.0.3"
       environment:
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
         - DBPASS=${DBPASS}
-        - DBHOST=${DBHOST}
-        - REDIS_HOST=${REDIS_HOST}
+        - DBHOST=172.22.0.5
+        - REDIS_HOST=172.22.0.3
         - TZ=${TZ}
       restart: always
       networks:
-        e-commerce-network:
+        mailcow-network:
 
     acme-mailcow:
       image: ghcr.io/mailcow/acme:1.95
-      extra_hosts:
-        - "mysql:172.22.0.5"
-        - "redis:172.22.0.3"
       environment:
-        - DBHOST=${DBHOST}
-        - REDIS_HOST=${REDIS_HOST}
+        - DBHOST=172.22.0.5
+        - REDIS_HOST=172.22.0.3
         - TZ=${TZ}
-        - MAILCOW_HOSTNAME=${MAILCOW_HOSTNAME}
       restart: always
       networks:
-        e-commerce-network:
+        mailcow-network:
 
     netfilter-mailcow:
       image: ghcr.io/mailcow/netfilter:1.63
@@ -192,7 +165,7 @@ services:
         - /var/run/docker.sock:/var/run/docker.sock:ro
       restart: always
       networks:
-        e-commerce-network:
+        mailcow-network:
 
     olefy-mailcow:
       image: ghcr.io/mailcow/olefy:1.15
@@ -200,7 +173,7 @@ services:
         - TZ=${TZ}
       restart: always
       networks:
-        e-commerce-network:
+        mailcow-network:
 
     memcached-mailcow:
       image: memcached:alpine
@@ -208,7 +181,7 @@ services:
         - TZ=${TZ}
       restart: always
       networks:
-        e-commerce-network:
+        mailcow-network:
 
     ofelia-mailcow:
       image: mcuadros/ofelia:latest
@@ -217,10 +190,10 @@ services:
         - /var/run/docker.sock:/var/run/docker.sock:ro
       restart: always
       networks:
-        e-commerce-network:
+        mailcow-network:
 
 networks:
-  e-commerce-network:
+  mailcow-network:
     name: e-c-deployerscript_e-commerce-network
     external: true
 
