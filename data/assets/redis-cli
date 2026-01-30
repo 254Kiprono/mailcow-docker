@@ -1,0 +1,21 @@
+#!/bin/sh
+# Mock redis-cli to strip AUTH if it causes issues, or fallback to real command
+REAL_REDIS="/usr/bin/redis-cli"
+if [ ! -f "$REAL_REDIS" ]; then
+  # Try to find it if not at /usr/bin/
+  REAL_REDIS=$(which redis-cli | grep -v "local")
+fi
+
+# Try running with original args
+# If it fails with AUTH error, retry without AUTH
+TEMP_LOG=$(mktemp)
+"$REAL_REDIS" "$@" 2>$TEMP_LOG
+RET=$?
+if grep -q "ERR AUTH" $TEMP_LOG; then
+  # Strip -a and its password from arguments
+  NEW_ARGS=$(echo "$@" | sed -E 's/-a [^ ]+//g' | sed 's/--no-auth-warning//g')
+  "$REAL_REDIS" $NEW_ARGS
+  RET=$?
+fi
+rm -f $TEMP_LOG
+exit $RET
