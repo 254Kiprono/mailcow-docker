@@ -1,5 +1,19 @@
 services:
 
+    mysql-socket-proxy:
+      image: alpine
+      command: >
+        sh -c "apk add --no-cache socat &&
+               mkdir -p /var/run/mysqld &&
+               socat UNIX-LISTEN:/var/run/mysqld/mysqld.sock,fork,mode=777 TCP:hkup-db-service:3306"
+      volumes:
+        - mysql-socket-vol-1:/var/run/mysqld/
+      networks:
+        mailcow-network:
+          aliases:
+            - mysql
+      restart: always
+
     unbound-mailcow:
       image: ghcr.io/mailcow/unbound:1.24
       environment:
@@ -19,8 +33,8 @@ services:
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
         - DBPASS=${DBPASS}
-        - DBHOST=172.22.0.5
-        - REDIS_HOST=172.22.0.3
+        - DBHOST=hkup-db-service
+        - REDIS_HOST=hkup-redis-service
         - MAILCOW_HOSTNAME=${MAILCOW_HOSTNAME}
         - MASTER=${MASTER:-y}
       volumes:
@@ -28,6 +42,7 @@ services:
         - ./data/web:/web:z
         - ./data/conf/sogo/:/etc/sogo/:z
         - ./data/conf/nginx/:/etc/nginx/conf.d/:z
+        - mysql-socket-vol-1:/var/run/mysqld/
       restart: always
       networks:
         mailcow-network:
@@ -40,8 +55,8 @@ services:
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
         - DBPASS=${DBPASS}
-        - DBHOST=172.22.0.5
-        - REDIS_HOST=172.22.0.3
+        - DBHOST=hkup-db-service
+        - REDIS_HOST=hkup-redis-service
         - TZ=${TZ}
         - MAILCOW_HOSTNAME=${MAILCOW_HOSTNAME}
         - MASTER=${MASTER:-y}
@@ -49,6 +64,7 @@ services:
         - ./data/conf/sogo/:/etc/sogo/:z
         - ./data/web/inc/init_db.inc.php:/init_db.inc.php:z
         - sogo-web-vol-1:/sogo_web
+        - mysql-socket-vol-1:/var/run/mysqld/
       restart: always
       networks:
         mailcow-network:
@@ -61,12 +77,13 @@ services:
         - ./data/conf/dovecot:/etc/dovecot:z
         - vmail-vol-1:/var/vmail
         - ./data/assets/ssl:/etc/ssl/mail/:ro,z
+        - mysql-socket-vol-1:/var/run/mysqld/
       environment:
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
         - DBPASS=${DBPASS}
-        - DBHOST=172.22.0.5
-        - REDIS_HOST=172.22.0.3
+        - DBHOST=hkup-db-service
+        - REDIS_HOST=hkup-redis-service
         - TZ=${TZ}
         - MAILCOW_HOSTNAME=${MAILCOW_HOSTNAME}
       restart: always
@@ -80,12 +97,13 @@ services:
       volumes:
         - ./data/conf/postfix:/opt/postfix/conf:z
         - ./data/assets/ssl:/etc/ssl/mail/:ro,z
+        - mysql-socket-vol-1:/var/run/mysqld/
       environment:
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
         - DBPASS=${DBPASS}
-        - DBHOST=172.22.0.5
-        - REDIS_HOST=172.22.0.3
+        - DBHOST=hkup-db-service
+        - REDIS_HOST=hkup-redis-service
         - TZ=${TZ}
       restart: always
       networks:
@@ -97,7 +115,7 @@ services:
       image: ghcr.io/mailcow/rspamd:3.14.2
       environment:
         - TZ=${TZ}
-        - REDIS_HOST=172.22.0.3
+        - REDIS_HOST=hkup-redis-service
       volumes:
         - rspamd-vol-1:/var/lib/rspamd
       restart: always
@@ -133,9 +151,11 @@ services:
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
         - DBPASS=${DBPASS}
-        - DBHOST=172.22.0.5
-        - REDIS_HOST=172.22.0.3
+        - DBHOST=hkup-db-service
+        - REDIS_HOST=hkup-redis-service
         - TZ=${TZ}
+      volumes:
+        - mysql-socket-vol-1:/var/run/mysqld/
       restart: always
       networks:
         mailcow-network:
@@ -143,9 +163,11 @@ services:
     acme-mailcow:
       image: ghcr.io/mailcow/acme:1.95
       environment:
-        - DBHOST=172.22.0.5
-        - REDIS_HOST=172.22.0.3
+        - DBHOST=hkup-db-service
+        - REDIS_HOST=hkup-redis-service
         - TZ=${TZ}
+      volumes:
+        - mysql-socket-vol-1:/var/run/mysqld/
       restart: always
       networks:
         mailcow-network:
