@@ -1,7 +1,7 @@
 #!/bin/sh
 # Mock curl to return fake container info and success messages for Mailcow loops
 if echo "$@" | grep -q "containers/json"; then
-  echo '[{"Id":"dummy","Config":{"Labels":{"com.docker.compose.service":"mysql-mailcow","com.docker.compose.project":"mailcow-dockerized"}}}]'
+  echo '[{"Id":"dummy_mysql_id","Config":{"Labels":{"com.docker.compose.service":"mysql-mailcow","com.docker.compose.project":"mailcow-dockerized"}}}]'
   exit 0
 fi
 if echo "$@" | grep -q "/exec"; then
