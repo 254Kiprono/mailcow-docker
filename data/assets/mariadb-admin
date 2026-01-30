@@ -1,0 +1,3 @@
+#!/bin/sh
+# Dummy mariadb-admin to bypass Mailcow startup loop
+exit 0
